@@ -32,7 +32,6 @@ def main():
     # db_sess.add(courier)
     # db_sess.commit()
 
-
     # Вот так производится выборка всех
     # for user in db_sess.query(Courier).all():
     #     print(user)
