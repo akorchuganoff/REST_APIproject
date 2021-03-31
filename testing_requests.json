@@ -1,14 +1,28 @@
 //1
 print(post('http://localhost:80/couriers/1', {
+print(post('http://localhost:80/couriers', json={
   "data": [
+    {
+      "courier_id": 1,
+      "courier_type": "car",
+      "regions": '123',
+      "working_hours": '09:00-18:00'
+    },
     {
       "courier_id": 2,
       "courier_type": "car",
       "regions": '123',
       "working_hours": '09:00-18:00'
+    },
+    {
+      "courier_id": 3,
+      "courier_type": "car",
+      "regions": '123',
+      "working_hours": '09:00-18:00'
     }
+
   ]
-}))
+}).json())
 //2
 print(patch('http://localhost:80/couriers/1', {'courier_type': 'car'}).json())
 //3

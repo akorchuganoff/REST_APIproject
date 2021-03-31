@@ -1,10 +1,10 @@
-from flask import jsonify
+from flask import jsonify, request
 from flask_restful import reqparse, abort, Resource
 from . import db_session
 from .couriers import Courier
 
 parser = reqparse.RequestParser()
-parser.add_argument('data', required=False, action='append') # для примера
+parser.add_argument('data', required=False, type=dict, action='append') # для примера
 
 parser_self_arguments = reqparse.RequestParser()
 parser_self_arguments.add_argument('courier_type', required=False)
@@ -50,15 +50,15 @@ class CouriersListResource(Resource):
     def post(self):
         db_sess = db_session.create_session()
         args = parser.parse_args()
-        L = reqparse.request.json()
-        if args['data']:  # пример обращения к аргументам парсера
-            for elem in args['data']:
-                L.append(elem)
-                # courier = Courier()
-                # courier.courier_id = elem['courier_id']
-                # courier.courier_type = elem['courier_type']
-                # courier.regions = elem['regions']
-                # courier.working_hours = elem['working_hours']
-                # db_sess.add(courier)
-                # db_sess.commit()
+        L = []
+        for elem in args['data']:
+            courier = Courier()
+            courier.courier_id = elem['courier_id']
+            courier.courier_type = elem['courier_type']
+            courier.regions = elem['regions']
+            courier.working_hours = elem['working_hours']
+            db_sess.add(courier)
+            db_sess.commit()
+            user = db_sess.query(Courier).filter(Courier.courier_id == elem['courier_id']).first()
+            L.append(user.to_dict())
         return jsonify(L)
