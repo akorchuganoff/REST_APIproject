@@ -4,7 +4,6 @@ from . import db_session
 from .couriers import Courier
 
 parser = reqparse.RequestParser()
-parser.add_argument('id', required=False, type=int)
 parser.add_argument('data', required=False, action='append') # для примера
 
 parser_self_arguments = reqparse.RequestParser()
@@ -51,7 +50,7 @@ class CouriersListResource(Resource):
     def post(self):
         db_sess = db_session.create_session()
         args = parser.parse_args()
-        L = []
+        L = reqparse.request.json()
         if args['data']:  # пример обращения к аргументам парсера
             for elem in args['data']:
                 L.append(elem)
