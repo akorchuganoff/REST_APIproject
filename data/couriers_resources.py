@@ -7,7 +7,7 @@ parser = reqparse.RequestParser()
 parser.add_argument('id', required=False, type=int)
 parser.add_argument('data', required=False, action='append') # для примера
 
-db_sess = db_session.create_session()
+
 
 def abort_if_not_found(id):
         abort(404, message=f"courier {id} not found") # функция для вызова ошибки и возврата message
@@ -15,21 +15,29 @@ def abort_if_not_found(id):
 
 class CourierResource(Resource):
     def get(self, id):
-        user = db_sess.query(Courier).filter(Courier.courier_id == id)
+        db_sess = db_session.create_session()
+
+        user = db_sess.query(Courier).filter(Courier.courier_id == id).first()
+
         return jsonify(user)# тут какая-то твоя работа функции которая возвращает json
 
     def delete(self, id):
+        db_sess = db_session.create_session()
         return jsonify({'success': 'OK'}) # на удаление примитив ok
 
     def patch(self, id):
+        db_sess = db_session.create_session()
         return jsonify({'success': 'OK'})  # на удаление примитив ok
 
 
 class CouriersListResource(Resource):
     def get(self):
+        db_sess = db_session.create_session()
         return jsonify({'success': 'OK'})# тут какая-то твоя работа функции которая возвращает json
 
     def post(self):
+        db_sess = db_session.create_session()
+
         args = parser.parse_args()
         L = []
         if args['data']:  # пример обращения к аргументам парсера

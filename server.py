@@ -21,7 +21,9 @@ api.add_resource(order_resources.OrderComplete, '/orders/complete')
 
 def main():
     db_session.global_init("db/database.db")
+
     db_sess = db_session.create_session()
+
 
     # Добавить что то в базу данных вот так
     # courier = Courier()
@@ -44,7 +46,7 @@ def main():
     # db_sess.query(Courier).filter(Courier.courier_id == 1).delete()
     # db_sess.commit()
 
-    # app.run(port=80, host='127.0.0.1', debug=True)
+    app.run(port=80, host='127.0.0.1', debug=True)
 
 
 if __name__ == '__main__':
