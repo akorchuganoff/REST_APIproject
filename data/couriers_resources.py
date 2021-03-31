@@ -1,6 +1,6 @@
 from flask import jsonify
 from flask_restful import reqparse, abort, Resource
-from data import db_session
+from . import db_session
 from .couriers import Courier
 
 parser = reqparse.RequestParser()
