@@ -6,6 +6,7 @@ from data import order_resources
 from data import db_session
 from data.couriers import Courier
 
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret_key'
 api = Api(app)
@@ -15,8 +16,8 @@ api.add_resource(couriers_resources.CouriersListResource, '/couriers')
 
 # api.add_resource(order_resources.OrderResource, '')
 api.add_resource(order_resources.OrderListResource, '/orders')
-api.add_resource(order_resources.OrderAssign, '/orders/assign')
-api.add_resource(order_resources.OrderComplete, '/orders/complete')
+# api.add_resource(order_resources.OrderAssign, '/orders/assign')
+# api.add_resource(order_resources.OrderComplete, '/orders/complete')
 
 
 def main():
