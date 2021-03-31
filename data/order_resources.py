@@ -11,6 +11,10 @@ parser.add_argument('data', required=False, type=dict, action='append')
 assign_parser = reqparse.RequestParser()
 assign_parser.add_argument('courier_id', required=True, type=int)
 
+complete_parser = reqparse.RequestParser()
+complete_parser.add_argument("courier_id", required=True, type=int)
+complete_parser.add_argument("order_id", required=True, type=int)
+complete_parser.add_argument("complete_time", required=True, type=str)
 
 def checkTime(courier, order):
     times1 = courier.working_hours.split(' ')
@@ -74,4 +78,29 @@ class OrderAssign(Resource):
         courier.orders_id += ' '.join(L)
         db_sess.commit()
 
-        return jsonify({"order": ans,  'assign_time': datetime.datetime.now()})
+        if not courier.completed_flag:
+            assign_time = datetime.datetime.now()
+            courier.assign_time = assign_time
+            db_sess.commit()
+        else:
+            assign_time = courier.assign_time
+
+        return jsonify({"order": ans,  'assign_time': assign_time})
+
+
+class OrderComplete(Resource):
+    def post(self):
+        db_sess = db_session.create_session()
+
+        try:
+            args = complete_parser.parse_args()
+        except Exception:
+            abort(400, message='Bad Request')
+
+        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id'])
+        order = db_sess.query(Orders).filter(Orders.order_id == args['order_id'])
+        complete_time = args["complete_time"]
+
+
+
+        return jsonify({'success': 'OK'})

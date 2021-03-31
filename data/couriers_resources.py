@@ -2,6 +2,7 @@ from flask import jsonify, request
 from flask_restful import reqparse, abort, Resource
 from . import db_session
 from .couriers import Courier
+from .regions import Regions
 
 parser = reqparse.RequestParser()
 parser.add_argument('data', required=False, type=dict, action='append') # для примера
@@ -55,14 +56,22 @@ class CouriersListResource(Resource):
             courier = Courier()
             courier.courier_id = elem['courier_id']
             courier.courier_type = elem['courier_type']
-            courier.regions = ' '.join(map(str, elem['regions']))
+            # courier.regions = ' '.join(map(str, elem['regions']))
             courier.working_hours = ' '.join(map(str, elem['working_hours']))
+
             if courier.courier_type == 'foot':
                 courier.max_weight = 10
             elif courier.courier_type == 'bike':
                 courier.max_weight = 20
             else:
                 courier.max_weight = 50
+
+            for reg in elem['regions']:
+                region = Regions()
+                region.courier_id = courier.courier_id
+                region.region = reg
+                db_sess.add(region)
+
             db_sess.add(courier)
             db_sess.commit()
             user = db_sess.query(Courier).filter(Courier.courier_id == elem['courier_id']).first()
