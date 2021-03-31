@@ -16,7 +16,7 @@ api.add_resource(couriers_resources.CouriersListResource, '/couriers')
 
 # api.add_resource(order_resources.OrderResource, '')
 api.add_resource(order_resources.OrderListResource, '/orders')
-# api.add_resource(order_resources.OrderAssign, '/orders/assign')
+api.add_resource(order_resources.OrderAssign, '/orders/assign')
 # api.add_resource(order_resources.OrderComplete, '/orders/complete')
 
 
