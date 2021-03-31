@@ -66,14 +66,19 @@ class CouriersListResource(Resource):
             else:
                 courier.max_weight = 50
 
-            for reg in elem['regions']:
-                region = Regions()
-                region.courier_id = courier.courier_id
-                region.region = reg
-                db_sess.add(region)
-
             db_sess.add(courier)
             db_sess.commit()
+
+            for reg in elem['regions']:
+                region = Regions()
+                region.courier = courier
+                region.region = reg
+                # courier.regions.append(region)
+                db_sess.add(region)
+                db_sess.commit()
+
+
             user = db_sess.query(Courier).filter(Courier.courier_id == elem['courier_id']).first()
-            L.append(user.to_dict())
+            L.append(user.to_dict()) # Переназвать нормально
+
         return jsonify(L)

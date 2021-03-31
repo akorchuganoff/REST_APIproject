@@ -8,7 +8,7 @@ from sqlalchemy import orm
 class Courier(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'Couriers'
 
-    courier_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    courier_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     courier_type = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     # regions = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     working_hours = sqlalchemy.Column(sqlalchemy.String, nullable=False)

@@ -17,6 +17,6 @@ class Regions(SqlAlchemyBase, SerializerMixin):
     courier = orm.relation('Courier')
 
 
-    def __repr__(self):
-        return [{'Order_id': self.order_id}, {'Weight': self.weight}, {'Region': self.region},
-                {'Delivery_hours hours': self.delivery_hours}, {'Flag': self.flag}]
+    # def __repr__(self):
+    #     return [{'Order_id': self.order_id}, {'Weight': self.weight}, {'Region': self.region},
+    #             {'Delivery_hours hours': self.delivery_hours}, {'Flag': self.flag}]
