@@ -13,9 +13,8 @@ parser_self_arguments.add_argument('regions', required=False, type=int, action='
 parser_self_arguments.add_argument('working_hours', required=False)
 
 
-
 def abort_if_not_found(id):
-        abort(404, message=f"courier {id} not found") # функция для вызова ошибки и возврата message
+        abort(404, message=f"courier {id} not found")# функция для вызова ошибки и возврата message
 
 
 class CourierResource(Resource):
@@ -68,7 +67,7 @@ class CourierResource(Resource):
 
 class CouriersListResource(Resource):
     def post(self):
-        db_sess = db_session.create_session()
+        # db_sess = db_session.create_session()
         args = parser.parse_args()
 
         valid = []
@@ -105,12 +104,13 @@ class CouriersListResource(Resource):
                     courier.regions.append(region)
                     db_sess.commit()
                 valid.append({'id': elem['courier_id']})
-            except BaseException:
+            except Exception:
+                # return {'id': elem['courier_id']}
                 invalid.append({'id': elem['courier_id']})
-
 
         if len(invalid) != 0:
             data = {"message": "Bad Request", "validation_error": {"couriers": invalid}}
             return make_response(jsonify(data), 400)
+
         data = {"message": "Created", "couriers": valid}
         return make_response(jsonify(data), 201)
