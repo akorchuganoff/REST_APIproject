@@ -7,7 +7,7 @@ from sqlalchemy_serializer import SerializerMixin
 class Orders(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'Orders'
 
-    order_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    order_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, nullable=False)
     weight = sqlalchemy.Column(sqlalchemy.Float, nullable=False)
     region = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     delivery_hours = sqlalchemy.Column(sqlalchemy.String, nullable=False)

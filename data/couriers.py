@@ -3,14 +3,14 @@ import sqlalchemy
 from .db_session import SqlAlchemyBase
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import orm
+from .regions import Regions
 
 
 class Courier(SqlAlchemyBase, SerializerMixin):
-    __tablename__ = 'Couriers'
+    __tablename__ = 'couriers'
 
     courier_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     courier_type = sqlalchemy.Column(sqlalchemy.String, nullable=False)
-    # regions = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     working_hours = sqlalchemy.Column(sqlalchemy.String, nullable=False)
     rating = sqlalchemy.Column(sqlalchemy.String, nullable=True, default=None)
     earnings = sqlalchemy.Column(sqlalchemy.Integer, default=0, nullable=False)
@@ -21,7 +21,7 @@ class Courier(SqlAlchemyBase, SerializerMixin):
     completed_flag = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=False)
     assign_time = sqlalchemy.Column(sqlalchemy.String, default='', nullable=False)
 
-    regions = orm.relation("Regions", back_populates='courier')
+    regions = orm.relationship("Regions", order_by=Regions.region_id, back_populates="courier")
 
 
     def __repr__(self):

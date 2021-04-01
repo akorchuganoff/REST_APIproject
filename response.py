@@ -1,12 +1,6 @@
 from requests import get,post,delete, patch
-
-print(post('http://localhost:80/couriers', json={
-  "data": [
-    {
-      "courier_id": 2,
-      "courier_type": "car",
-      "regions": [1, 2, 3],
-      "working_hours": ['09:00-18:00']
-    },
-  ]
+print(post('http://localhost:80/orders/complete', json={
+"courier_id": 2,
+"order_id": 33,
+"complete_time": "2021-01-10T10:33:01.42Z"
 }).json())

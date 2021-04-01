@@ -56,7 +56,7 @@ class CouriersListResource(Resource):
             courier = Courier()
             courier.courier_id = elem['courier_id']
             courier.courier_type = elem['courier_type']
-            # courier.regions = ' '.join(map(str, elem['regions']))
+
             courier.working_hours = ' '.join(map(str, elem['working_hours']))
 
             if courier.courier_type == 'foot':
@@ -65,6 +65,9 @@ class CouriersListResource(Resource):
                 courier.max_weight = 20
             else:
                 courier.max_weight = 50
+
+
+            # courier.regions = [Regions(region=elem['regions'][0]), Regions(region=elem['regions'][1])]
 
             db_sess.add(courier)
             db_sess.commit()
@@ -79,6 +82,7 @@ class CouriersListResource(Resource):
 
 
             user = db_sess.query(Courier).filter(Courier.courier_id == elem['courier_id']).first()
-            L.append(user.to_dict()) # Переназвать нормально
+            # L.append(user.regions) # Переназвать нормально
+            L=[]
 
         return jsonify(L)

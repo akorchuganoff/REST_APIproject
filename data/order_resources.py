@@ -3,6 +3,7 @@ from flask_restful import reqparse, abort, Resource
 from . import db_session
 from .orders import Orders
 from .couriers import Courier
+from .regions import Regions
 import datetime
 
 parser = reqparse.RequestParser()
@@ -79,7 +80,7 @@ class OrderAssign(Resource):
         db_sess.commit()
 
         if not courier.completed_flag:
-            assign_time = datetime.datetime.now()
+            assign_time = str(datetime.datetime.now())
             courier.assign_time = assign_time
             db_sess.commit()
         else:
@@ -92,15 +93,23 @@ class OrderComplete(Resource):
     def post(self):
         db_sess = db_session.create_session()
 
-        try:
-            args = complete_parser.parse_args()
-        except Exception:
-            abort(400, message='Bad Request')
+        # try:
+        args = complete_parser.parse_args()
+        ident = args['courier_id']
+        courier = db_sess.query(Courier).filter(Courier.courier_id == ident).first()
+        # courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
+        return jsonify(courier.to_dict())
+        # order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
+        # complete_time = args["complete_time"]
+        #
+        #
+        # if not courier or not order or not complete_time:
+        #     abort(400, message='Bad Request')
+        #
+        # reg = db_sess.query(Regions).filter(Regions.region == order.region, Regions.courier_id == courier.courier_id).first()
+        # time = courier.assign_time
+        #
+        # return jsonify({'time': time})
 
-        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id'])
-        order = db_sess.query(Orders).filter(Orders.order_id == args['order_id'])
-        complete_time = args["complete_time"]
-
-
-
-        return jsonify({'success': 'OK'})
+        # except Exception:
+        #     abort(400, message='Bad Request')
