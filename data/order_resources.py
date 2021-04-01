@@ -81,7 +81,6 @@ class OrderAssign(Resource):
         ans = []
         for order in db_sess.query(Orders).all():
             # L.append(order.flag)
-
             if order.region in reg and order.weight < courier.max_weight - courier.weight_of_food and order.flag == None and checkTime(courier, order):
                 # return jsonify(order.region)
                 # L.append(str(order.order_id))
@@ -105,9 +104,11 @@ class OrderAssign(Resource):
         else:
             assign_time = courier.assign_time
 
-        assotiates = db_sess.query(association_table_courier_to_order).filter(association_table_courier_to_order.courier_id == courier.courier_id).all()
+        db_sess = db_session.create_session()
+        assotiates = db_sess.query(association_table_courier_to_order).filter(association_table_courier_to_order.c.courier_id == courier.courier_id).all()
+        # assotiates.assigned_time
         for elem in assotiates:
-            elem.assign_time = assign_time
+            elem.assigned_time = assign_time
             db_sess.commit()
         data = {"order": ans,  'assign_time': assign_time}
         return make_response(jsonify(data), 200)

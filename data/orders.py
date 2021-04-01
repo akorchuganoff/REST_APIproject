@@ -11,7 +11,7 @@ association_table_courier_to_order = sqlalchemy.Table(
                       sqlalchemy.ForeignKey('Orders.order_id')),
     sqlalchemy.Column('courier_id', sqlalchemy.Integer,
                       sqlalchemy.ForeignKey('couriers.courier_id')),
-    sqlalchemy.Column('assigned_time', sqlalchemy.Float, nullable=False, default=0),
+    sqlalchemy.Column('assigned_time', sqlalchemy.String, nullable=False, default=0),
     sqlalchemy.Column('completed_time', sqlalchemy.Float, nullable=False, default=0)
 )
 
