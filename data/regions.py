@@ -5,18 +5,22 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import orm
 
 
+association_table = sqlalchemy.Table(
+    'association',
+    SqlAlchemyBase.metadata,
+    sqlalchemy.Column('region', sqlalchemy.Integer,
+                      sqlalchemy.ForeignKey('regions.region')),
+    sqlalchemy.Column('courier_id', sqlalchemy.Integer,
+                      sqlalchemy.ForeignKey('couriers.courier_id')),
+    sqlalchemy.Column('time', sqlalchemy.Integer, default=0, nullable=False),
+    sqlalchemy.Column('count', sqlalchemy.Integer, default=0, nullable=False)
+)
+
+
 class Regions(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'regions'
 
-    region_id = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True, autoincrement=True)
-    region = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
-    time = sqlalchemy.Column(sqlalchemy.Float, nullable=False, default=0)
-    count = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, default=0)
+    region = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True, autoincrement=True)
 
-    courier_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("couriers.courier_id"))
-    courier = orm.relation('Courier', back_populates="regions")
-
-
-    # def __repr__(self):
-    #     return [{'Order_id': self.order_id}, {'Weight': self.weight}, {'Region': self.region},
-    #             {'Delivery_hours hours': self.delivery_hours}, {'Flag': self.flag}]
+    def __repr__(self):
+        return [{'region': self.region}]

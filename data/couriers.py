@@ -21,8 +21,7 @@ class Courier(SqlAlchemyBase, SerializerMixin):
     completed_flag = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=False)
     assign_time = sqlalchemy.Column(sqlalchemy.String, default='', nullable=False)
 
-    regions = orm.relationship("Regions", order_by=Regions.region_id, back_populates="courier")
-
+    regions = orm.relation("Regions", secondary="association", backref="couriers")
 
     def __repr__(self):
         return [{'Couriers_id': self.courier_id}, {'Courier_type': self.courier_type}, {'Regions': self.regions},

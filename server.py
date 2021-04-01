@@ -5,6 +5,7 @@ from data import order_resources
 
 from data import db_session
 from data.couriers import Courier
+from data.regions import Regions
 
 
 app = Flask(__name__)
@@ -25,6 +26,32 @@ def main():
 
     db_sess = db_session.create_session()
 
+    # courier = Courier()
+    # courier.courier_id = 1
+    # courier.courier_type = 'car'
+    #
+    # courier.working_hours = '09:00-18:00'
+    #
+    # if courier.courier_type == 'foot':
+    #     courier.max_weight = 10
+    # elif courier.courier_type == 'bike':
+    #     courier.max_weight = 20
+    # else:
+    #     courier.max_weight = 50
+    #
+    # db_sess.add(courier)
+    # db_sess.commit()
+
+    # region = Regions()
+    # region.region = 2
+    #
+    # db_sess.add(region)
+    # db_sess.commit()
+    #
+    # courier = db_sess.query(Courier).filter(Courier.courier_id == 1).first()
+    # region = db_sess.query(Regions).filter(Regions.region == 2).first()
+    # courier.regions.append(region)
+    # db_sess.commit()
 
     # Добавить что то в базу данных вот так
     # courier = Courier()
