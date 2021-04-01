@@ -4,6 +4,7 @@ from . import db_session
 from .orders import Orders
 from .couriers import Courier
 from .regions import Regions
+from .orders import association_table_courier_to_order
 import datetime
 
 parser = reqparse.RequestParser()
@@ -30,7 +31,7 @@ def checkTime(courier, order):
             starta, enda = t1.split('-')
             sa = int(starta.split(':')[0])*60 + int(starta.split(':')[1])
             ea = int(enda.split(':')[0]) * 60 + int(enda.split(':')[1])
-            print(order.order_id, sa, ea, sb, eb)
+            # print(order.order_id, sa, ea, sb, eb)
             if sa <= eb and ea >= sb:
                 return True
     return False
@@ -74,29 +75,42 @@ class OrderAssign(Resource):
         courier = db_sess.query(Courier).filter(Courier.courier_id == id).first()
         if not courier:
             abort(400, message='Bad Request')
-        regions = list(map(int, courier.regions.split(' ')))
+        reg = list(map(lambda region: region.region, courier.regions))
+        # regions = list(map(int, courier.regions.split(' ')))
+        print(reg)
         ans = []
         for order in db_sess.query(Orders).all():
             # L.append(order.flag)
-            if order.region in regions and order.weight < courier.max_weight - courier.weight_of_food and\
-                    order.flag == None and checkTime(courier, order):
 
-                L.append(str(order.order_id))
+            if order.region in reg and order.weight < courier.max_weight - courier.weight_of_food and order.flag == None and checkTime(courier, order):
+                # return jsonify(order.region)
+                # L.append(str(order.order_id))
+                courier.orders.append(order)
                 order.flag = 'assigned'
                 courier.weight_of_food += order.weight
                 db_sess.commit()
                 ans.append({"id": order.order_id})
-        courier.orders_id += ' '.join(L)
+        # courier.orders_id += ' '.join(L)
         db_sess.commit()
+
+        print(ans)
+        if len(ans) == 0:
+            return jsonify([])
 
         if not courier.completed_flag:
             assign_time = str(datetime.datetime.now())
             courier.assign_time = assign_time
+            courier.completed_flag = True
             db_sess.commit()
         else:
             assign_time = courier.assign_time
 
-        return jsonify({"order": ans,  'assign_time': assign_time})
+        assotiates = db_sess.query(association_table_courier_to_order).filter(association_table_courier_to_order.courier_id == courier.courier_id).all()
+        for elem in assotiates:
+            elem.assign_time = assign_time
+            db_sess.commit()
+        data = {"order": ans,  'assign_time': assign_time}
+        return make_response(jsonify(data), 200)
 
 
 class OrderComplete(Resource):

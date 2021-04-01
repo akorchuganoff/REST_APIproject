@@ -23,4 +23,4 @@ class Regions(SqlAlchemyBase, SerializerMixin):
     region = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True, autoincrement=True)
 
     def __repr__(self):
-        return [{'region': self.region}]
+        return f'region : {self.region}'

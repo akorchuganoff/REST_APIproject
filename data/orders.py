@@ -4,6 +4,18 @@ from .db_session import SqlAlchemyBase
 from sqlalchemy_serializer import SerializerMixin
 
 
+association_table_courier_to_order = sqlalchemy.Table(
+    'courier_to_order',
+    SqlAlchemyBase.metadata,
+    sqlalchemy.Column('order_id', sqlalchemy.Integer,
+                      sqlalchemy.ForeignKey('Orders.order_id')),
+    sqlalchemy.Column('courier_id', sqlalchemy.Integer,
+                      sqlalchemy.ForeignKey('couriers.courier_id')),
+    sqlalchemy.Column('assigned_time', sqlalchemy.Float, nullable=False, default=0),
+    sqlalchemy.Column('completed_time', sqlalchemy.Float, nullable=False, default=0)
+)
+
+
 class Orders(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'Orders'
 
