@@ -4,7 +4,7 @@ from . import db_session
 from .orders import Orders
 from .couriers import Courier
 from .regions import Regions
-from .orders import association_table_courier_to_order
+from .orders import CourierToOrder
 import datetime
 
 parser = reqparse.RequestParser()
@@ -79,14 +79,25 @@ class OrderAssign(Resource):
         # regions = list(map(int, courier.regions.split(' ')))
         print(reg)
         ans = []
+        time = datetime.datetime.now()
         for order in db_sess.query(Orders).all():
             # L.append(order.flag)
             if order.region in reg and order.weight < courier.max_weight - courier.weight_of_food and order.flag == None and checkTime(courier, order):
                 # return jsonify(order.region)
                 # L.append(str(order.order_id))
-                courier.orders.append(order)
+
+                # print(order)
+
+                courier_order = CourierToOrder()
+                courier_order.courier = courier
+                courier_order.order = order
+
+                courier_order.assigned_time = str(time)
+
                 order.flag = 'assigned'
                 courier.weight_of_food += order.weight
+
+                db_sess.add(courier_order)
                 db_sess.commit()
                 ans.append({"id": order.order_id})
         # courier.orders_id += ' '.join(L)
@@ -105,9 +116,10 @@ class OrderAssign(Resource):
             assign_time = courier.assign_time
 
         db_sess = db_session.create_session()
-        assotiates = db_sess.query(association_table_courier_to_order).filter(association_table_courier_to_order.c.courier_id == courier.courier_id).all()
+        assotiates = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == courier.courier_id).all()
         # assotiates.assigned_time
         for elem in assotiates:
+            print(type(elem))
             elem.assigned_time = assign_time
             db_sess.commit()
         data = {"order": ans,  'assign_time': assign_time}
@@ -120,8 +132,7 @@ class OrderComplete(Resource):
 
         # try:
         args = complete_parser.parse_args()
-        ident = args['courier_id']
-        courier = db_sess.query(Courier).filter(Courier.courier_id == ident).first()
+        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
         # courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
         return jsonify(courier.to_dict())
         # order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()

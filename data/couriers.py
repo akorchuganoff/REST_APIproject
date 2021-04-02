@@ -22,7 +22,8 @@ class Courier(SqlAlchemyBase, SerializerMixin):
     assign_time = sqlalchemy.Column(sqlalchemy.String, default='', nullable=False)
 
     regions = orm.relation("Regions", secondary="association", backref="couriers")
-    orders = orm.relation("Orders", secondary="courier_to_order", backref="couriers")
+    # orders = orm.relation("Orders", secondary="courier_to_order", backref="couriers")
+    orders = orm.relation("CourierToOrder", back_populates='courier')
 
     def __repr__(self):
         return [{'Couriers_id': self.courier_id}, {'Courier_type': self.courier_type}, {'Regions': self.regions},
