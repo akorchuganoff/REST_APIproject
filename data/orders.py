@@ -22,8 +22,8 @@ class CourierToOrder(SqlAlchemyBase, SerializerMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer, nullable=False, primary_key=True, autoincrement=True)
     order_id = sqlalchemy.Column('order_id', sqlalchemy.Integer, sqlalchemy.ForeignKey('Orders.order_id'))
     courier_id = sqlalchemy.Column('courier_id', sqlalchemy.Integer, sqlalchemy.ForeignKey('couriers.courier_id'))
-    assigned_time = sqlalchemy.Column(sqlalchemy.String, nullable=False, default='')
-    completed_time = sqlalchemy.Column(sqlalchemy.String, nullable=False, default='')
+    assigned_time = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False, default=datetime.datetime.now())
+    completed_time = sqlalchemy.Column(sqlalchemy.DateTime, nullable=True, default=None)
 
     courier = orm.relation("Courier")
     order = orm.relation("Orders")

@@ -3,9 +3,10 @@ from flask_restful import reqparse, abort, Resource
 from . import db_session
 from .orders import Orders
 from .couriers import Courier
-from .regions import Regions
+from .regions import Regions, CourierToRegion
 from .orders import CourierToOrder
 import datetime
+import arrow
 
 parser = reqparse.RequestParser()
 parser.add_argument('data', required=False, type=dict, action='append')
@@ -75,24 +76,19 @@ class OrderAssign(Resource):
         courier = db_sess.query(Courier).filter(Courier.courier_id == id).first()
         if not courier:
             abort(400, message='Bad Request')
-        reg = list(map(lambda region: region.region, courier.regions))
-        # regions = list(map(int, courier.regions.split(' ')))
+        reg = list(map(lambda region: region.region_id, courier.regions))
         print(reg)
         ans = []
-        time = datetime.datetime.now()
+        time = datetime.datetime.now(datetime.timezone.utc)
         for order in db_sess.query(Orders).all():
-            # L.append(order.flag)
             if order.region in reg and order.weight < courier.max_weight - courier.weight_of_food and order.flag == None and checkTime(courier, order):
-                # return jsonify(order.region)
-                # L.append(str(order.order_id))
-
-                # print(order)
+                print(order.order_id)
 
                 courier_order = CourierToOrder()
                 courier_order.courier = courier
                 courier_order.order = order
 
-                courier_order.assigned_time = str(time)
+                courier_order.assigned_time = time
 
                 order.flag = 'assigned'
                 courier.weight_of_food += order.weight
@@ -100,7 +96,6 @@ class OrderAssign(Resource):
                 db_sess.add(courier_order)
                 db_sess.commit()
                 ans.append({"id": order.order_id})
-        # courier.orders_id += ' '.join(L)
         db_sess.commit()
 
         print(ans)
@@ -108,20 +103,12 @@ class OrderAssign(Resource):
             return jsonify([])
 
         if not courier.completed_flag:
-            assign_time = str(datetime.datetime.now())
+            assign_time = str(time)
             courier.assign_time = assign_time
-            courier.completed_flag = True
             db_sess.commit()
         else:
             assign_time = courier.assign_time
 
-        db_sess = db_session.create_session()
-        assotiates = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == courier.courier_id).all()
-        # assotiates.assigned_time
-        for elem in assotiates:
-            print(type(elem))
-            elem.assigned_time = assign_time
-            db_sess.commit()
         data = {"order": ans,  'assign_time': assign_time}
         return make_response(jsonify(data), 200)
 
@@ -130,22 +117,61 @@ class OrderComplete(Resource):
     def post(self):
         db_sess = db_session.create_session()
 
+
         # try:
         args = complete_parser.parse_args()
         courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
-        # courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
-        return jsonify(courier.to_dict())
-        # order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
-        # complete_time = args["complete_time"]
+
+        order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
+        complete_time = args["complete_time"]
+        order.flag = 'completed'
+        # db_sess.commit()
+
+        if not courier or not order or not complete_time:
+            abort(400, message='Bad Request')
+
+        courier_to_order = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == args['courier_id'],
+                                                                CourierToOrder.order_id == args['order_id']).first()
+        if not courier_to_order:
+            abort(400, message='Bad Request')
+
+        time = arrow.get(complete_time).datetime
+        print(time)
+        courier_to_order.completed_time = time
+        db_sess.commit()
         #
-        #
-        # if not courier or not order or not complete_time:
-        #     abort(400, message='Bad Request')
-        #
-        # reg = db_sess.query(Regions).filter(Regions.region == order.region, Regions.courier_id == courier.courier_id).first()
-        # time = courier.assign_time
-        #
-        # return jsonify({'time': time})
+        delta = courier_to_order.completed_time - courier_to_order.assigned_time
+        print(delta.total_seconds())
+
+        courier_to_region = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id,
+                                                                  CourierToRegion.region_id == order.region).first()
+        t = courier_to_region.time
+        courier_to_region.time = t + delta.total_seconds()
+        c = courier_to_region.count
+        courier_to_region.count = c + 1
+        db_sess.commit()
+
+        lines = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).all()
+        times = map(lambda reg: reg.time, lines)
+        t = min(times)
+        rating = (60 * 60 - min(t, 60 * 60)) / (60 * 60) * 5
+
+        courier.rating = rating
+        db_sess.commit()
+
+        if courier.courier_type == 'foot':
+            C = 2
+        elif courier.courier_type == 'bike':
+            C = 5
+        else:
+            C = 9
+
+        earnings = courier.earnings
+        courier.earnings = earnings + 500 * C
+        courier.completed_flag = True
+        db_sess.commit()
+
+        return make_response(jsonify({"order_id": order.order_id}), 200)
 
         # except Exception:
         #     abort(400, message='Bad Request')
