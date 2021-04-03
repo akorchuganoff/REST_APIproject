@@ -50,6 +50,8 @@ class OrderListResource(Resource):
             # noinspection PyBroadException
             try:
                 order = Orders()
+                if elem['order_id'] in list(map(lambda order: order.order_id, db_sess.query(Orders).all())):
+                    raise Exception
                 order.order_id = elem['order_id']
                 order.weight = elem['weight']
                 if order.weight > 50:
@@ -57,7 +59,6 @@ class OrderListResource(Resource):
                 order.region = elem['region']
                 order.delivery_hours = ' '.join(elem['delivery_hours'])
                 ORDERS.append(order)
-                # db_sess.add(order)
 
                 valid.append({'id': order.order_id})
             except BaseException:
@@ -80,8 +81,7 @@ class OrderAssign(Resource):
         db_sess = db_session.create_session()
         args = assign_parser.parse_args()
         print(args['courier_id'])
-        courier = db_sess.query(Courier).filter(Courier.courier_id == 6).first()
-        print(3)
+        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
         if not courier:
             abort(400, message='Bad Request')
         print(2)
@@ -111,7 +111,8 @@ class OrderAssign(Resource):
         db_sess.commit()
 
         orders = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == courier.courier_id).all()
-        ans = list(map(lambda c_to_o: c_to_o.order_id, orders))
+        order_list = list(map(lambda c_to_o: c_to_o.order_id, orders))
+        ans = list(map(lambda x: {"id": x}, order_list))
         print(ans)
         if len(ans) == 0:
             return jsonify({'orders': []})
