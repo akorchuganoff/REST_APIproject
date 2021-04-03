@@ -88,12 +88,12 @@ class OrderAssign(Resource):
         reg = list(map(lambda c_to_r: c_to_r.region_id, db_sess.query(CourierToRegion).filter(
             CourierToRegion.courier_id == courier.courier_id).all()))
         print(reg)
-        ans = []
+        ORDERS = []
         time = datetime.datetime.now(datetime.timezone.utc)
         for order in db_sess.query(Orders).all():
             if order.region in reg and order.weight < courier.max_weight - courier.weight_of_food and\
                     order.flag is None and check_time(courier, order):
-                print(order.order_id)
+                ORDERS.append(order)
 
                 courier_order = CourierToOrder()
                 courier_order.courier = courier
@@ -114,8 +114,8 @@ class OrderAssign(Resource):
         order_list = list(map(lambda c_to_o: c_to_o.order_id, orders))
         ans = list(map(lambda x: {"id": x}, order_list))
         print(ans)
-        if len(ans) == 0:
-            return jsonify({'orders': []})
+        if len(ORDERS) == 0:
+            return jsonify({'orders': ans})
 
         if not courier.completed_flag:
             assign_time = str(time)
@@ -133,64 +133,70 @@ class OrderComplete(Resource):
     def post(self):
         db_sess = db_session.create_session()
 
-        # try:
-        args = complete_parser.parse_args()
-        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
+        try:
+            args = complete_parser.parse_args()
+            courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
 
-        order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
-        complete_time = args["complete_time"]
-        order.flag = 'completed'
-        # db_sess.commit()
+            order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
+            complete_time = args["complete_time"]
 
-        if not courier or not order or not complete_time:
+            # db_sess.commit()
+
+            if not courier or not order or not complete_time:
+                abort(400, message='Bad Request')
+
+            courier_to_order = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == args['courier_id'],
+                                                                    CourierToOrder.order_id == args['order_id']).first()
+            if not courier_to_order:
+                abort(400, message='Bad Request')
+
+            if order.flag != 'completed':
+                order.flag = 'completed'
+
+                time = arrow.get(complete_time).datetime
+                courier_to_order.completed_time = time
+                db_sess.commit()
+                print(courier_to_order.assigned_time)
+                print(courier_to_order.completed_time)
+                #
+                delta = courier_to_order.completed_time - courier_to_order.assigned_time
+
+                courier_to_region = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id,
+                                                                          CourierToRegion.region_id == order.region).first()
+                t = courier_to_region.time
+                courier_to_region.time = t + delta.total_seconds()
+                c = courier_to_region.count
+                courier_to_region.count = c + 1
+                db_sess.commit()
+
+                lines = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).all()
+                # times = map(lambda reg: reg.time / reg.count, lines)
+                times = []
+                for i in range(len(lines)):
+                    if lines[i].count == 0:
+                        continue
+                    times.append(lines[i].time / lines[i].count)
+                t = min(times)
+                print(t)
+                rating = (60 * 60 - min(t, 60 * 60)) / (60 * 60) * 5
+                print(rating)
+                courier.rating = rating
+                db_sess.commit()
+
+                if courier.courier_type == 'foot':
+                    k = 2
+                elif courier.courier_type == 'bike':
+                    k = 5
+                else:
+                    k = 9
+
+                courier.weight_of_food -= order.weight
+                earnings = courier.earnings
+                courier.earnings = earnings + 500 * k
+                courier.completed_flag = True
+                db_sess.commit()
+
+            return make_response(jsonify({"order_id": order.order_id}), 200)
+
+        except Exception:
             abort(400, message='Bad Request')
-
-        courier_to_order = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == args['courier_id'],
-                                                                CourierToOrder.order_id == args['order_id']).first()
-        if not courier_to_order:
-            abort(400, message='Bad Request')
-
-        time = arrow.get(complete_time).datetime
-        courier_to_order.completed_time = time
-        db_sess.commit()
-        #
-        delta = courier_to_order.completed_time - courier_to_order.assigned_time
-
-        courier_to_region = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id,
-                                                                  CourierToRegion.region_id == order.region).first()
-        t = courier_to_region.time
-        courier_to_region.time = t + delta.total_seconds()
-        c = courier_to_region.count
-        courier_to_region.count = c + 1
-        db_sess.commit()
-
-        lines = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).all()
-        # times = map(lambda reg: reg.time / reg.count, lines)
-        times = []
-        for i in range(len(lines)):
-            if lines[i].count == 0:
-                continue
-            times.append(lines[i].time / lines[i].count)
-        t = min(times)
-        print(t)
-        rating = (60 * 60 - min(t, 60 * 60)) / (60 * 60) * 5
-        print(rating)
-        courier.rating = rating
-        db_sess.commit()
-
-        if courier.courier_type == 'foot':
-            k = 2
-        elif courier.courier_type == 'bike':
-            k = 5
-        else:
-            k = 9
-
-        earnings = courier.earnings
-        courier.earnings = earnings + 500 * k
-        courier.completed_flag = True
-        db_sess.commit()
-
-        return make_response(jsonify({"order_id": order.order_id}), 200)
-
-        # except Exception:
-        #     abort(400, message='Bad Request')

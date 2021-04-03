@@ -15,7 +15,7 @@ class Courier(SqlAlchemyBase, SerializerMixin):
     earnings = sqlalchemy.Column(sqlalchemy.Integer, default=0, nullable=False)
     weight_of_food = sqlalchemy.Column(sqlalchemy.Float, default=0, nullable=False)
 
-    max_weight = sqlalchemy.Column(sqlalchemy.Float, default=0)
+    max_weight = sqlalchemy.Column(sqlalchemy.Float, default=0, nullable=False)
     completed_flag = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=False)
     assign_time = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now(), nullable=False)
 

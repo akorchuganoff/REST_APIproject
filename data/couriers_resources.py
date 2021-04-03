@@ -12,7 +12,7 @@ parser.add_argument('data', required=False, type=dict, action='append')
 parser_self_arguments = reqparse.RequestParser()
 parser_self_arguments.add_argument('courier_type', required=False)
 parser_self_arguments.add_argument('regions', required=False, type=int, action='append')
-parser_self_arguments.add_argument('working_hours', required=False)
+parser_self_arguments.add_argument('working_hours', required=False, type=str, action='append')
 
 
 class CourierResource(Resource):
@@ -33,71 +33,90 @@ class CourierResource(Resource):
         courier = db_sess.query(Courier).filter(Courier.courier_id == id).first()
         args = parser_self_arguments.parse_args()
         # noinspection PyBroadException
-        try:
-            if args['courier_type']:
-                courier.courier_type = args['courier_type']
-            if args['regions']:
-                db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).delete()
-                db_sess.commit()
+        # try:
+        if args['courier_type']:
+            courier.courier_type = args['courier_type']
+            if courier.courier_type == 'foot':
+                courier.max_weight = 10
+            elif courier.courier_type == 'bike':
+                courier.max_weight = 20
+            else:
+                courier.max_weight = 50
+            db_sess.commit()
+        if args['regions']:
+            db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).delete()
+            db_sess.commit()
 
-                for reg in args['regions']:
-                    region = db_sess.query(Regions).filter(Regions.region == reg).first()
-                    if not region:
-                        region = Regions()
-                        region.region = reg
-                        db_sess.add(region)
-                        db_sess.commit()
-
-                    courier_to_region = CourierToRegion()
-                    courier_to_region.courier = courier
-                    courier_to_region.region = region
-                    db_sess.add(courier_to_region)
+            for reg in args['regions']:
+                region = db_sess.query(Regions).filter(Regions.region == reg).first()
+                if not region:
+                    region = Regions()
+                    region.region = reg
+                    db_sess.add(region)
                     db_sess.commit()
 
-            if args['working_hours']:
-                courier.working_hours = args['working_hours']
+                courier_to_region = CourierToRegion()
+                courier_to_region.courier = courier
+                courier_to_region.region = region
+                db_sess.add(courier_to_region)
                 db_sess.commit()
 
-            orders = db_sess.query(Orders).filter(Orders.flag == 'assigned', Orders.region.notin_(args['regions']))
-            for order in orders:
-                courier_to_order = db_sess.query(CourierToOrder).filter(
-                    CourierToOrder.courier_id == courier.courier_id,
-                    CourierToOrder.order_id == order.order_id).first()
-                if not courier_to_order:
-                    continue
-                order.flag = None
-                courier.weight_of_food -= order.weight
-                db_sess.delete(courier_to_order)
-                db_sess.commit()
+        if args['working_hours']:
+            print(args['working_hours'])
+            courier.working_hours = ' '.join(args['working_hours'])
+            print(courier.working_hours)
+            db_sess.commit()
 
-            courier_to_order = db_sess.query(CourierToOrder).filter(
-                CourierToOrder.courier_id == courier.courier_id).all()
-
-            for c_to_o in courier_to_order:
-                order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id).first()
-                if not check_time(courier, order):
+        if args['regions']:
+            orders = db_sess.query(Orders).filter(Orders.flag == 'assigned', Orders.region.notin_(list(args['regions']))).all()
+            if orders:
+                for order in orders:
+                    courier_to_order = db_sess.query(CourierToOrder).filter(
+                        CourierToOrder.courier_id == courier.courier_id,
+                        CourierToOrder.order_id == order.order_id).first()
+                    if not courier_to_order:
+                        continue
                     order.flag = None
                     courier.weight_of_food -= order.weight
                     db_sess.delete(courier_to_order)
                     db_sess.commit()
 
-            arr_courier_to_order = db_sess.query(CourierToOrder).filter(
+        if args['working_hours']:
+            courier_to_order = db_sess.query(CourierToOrder).filter(
                 CourierToOrder.courier_id == courier.courier_id).all()
+
+            invalid = []
+            for i in range(len(courier_to_order)):
+                order = db_sess.query(Orders).filter(Orders.order_id == courier_to_order[i].order_id).first()
+                if not check_time(courier, order):
+                    order.flag = None
+                    courier.weight_of_food -= order.weight
+                    invalid.append(courier_to_order[i])
+
+            for elem in invalid:
+                db_sess.delete(elem)
+            db_sess.commit()
+
+        if args['courier_type']:
+            arr_courier_to_order = db_sess.query(CourierToOrder).filter(
+                CourierToOrder.courier_id == courier.courier_id, CourierToOrder.completed_time == None).all()
             i = 0
+            courier = db_sess.query(Courier).filter(Courier.courier_id == id).first()
             while courier.max_weight < courier.weight_of_food:
                 c_to_o = arr_courier_to_order[i]
-                order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id).first()
+                order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id, ).first()
                 order.flag = None
                 courier.weight_of_food -= order.weight
                 db_sess.delete(c_to_o)
                 db_sess.commit()
                 i += 1
-        except Exception:
-            print(Exception.__class__.__name__)
+        # except Exception:
+        #     print(1)
+        #     print(Exception.__class__.__name__)
 
         courier_to_region = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == id).all()
         reg = list(map(lambda regions: regions.region_id, courier_to_region))
-        d = courier.to_dict(only=("courier_id", "courier_type", "working_hours"))
+        d = courier.to_dict(only=("courier_id", "courier_type", "working_hours", 'max_weight', "weight_of_food"))
         d['regions'] = reg
         return jsonify(d)
 
