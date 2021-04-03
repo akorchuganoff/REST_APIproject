@@ -33,7 +33,6 @@ def check_time(courier, order):
             starta, enda = t1.split('-')
             sa = int(starta.split(':')[0])*60 + int(starta.split(':')[1])
             ea = int(enda.split(':')[0]) * 60 + int(enda.split(':')[1])
-            # print(order.order_id, sa, ea, sb, eb)
             if sa <= eb and ea >= sb:
                 return True
     return False
@@ -45,30 +44,32 @@ class OrderListResource(Resource):
         args = parser.parse_args()
         valid = []
         invalid = []
+        db_sess = db_session.create_session()
+        ORDERS = []
         for elem in args['data']:
             # noinspection PyBroadException
             try:
-                db_sess = db_session.create_session()
                 order = Orders()
                 order.order_id = elem['order_id']
                 order.weight = elem['weight']
                 if order.weight > 50:
-                    raise BaseException
+                    raise Exception
                 order.region = elem['region']
-                order.delivery_hours = elem['delivery_hours']
+                order.delivery_hours = ' '.join(elem['delivery_hours'])
+                ORDERS.append(order)
+                # db_sess.add(order)
 
-                db_sess.add(order)
-                db_sess.commit()
-
-                order_get = db_sess.query(Orders).filter(Orders.order_id == elem['order_id']).first()
-                valid.append({'id': order_get.order_id})
-
+                valid.append({'id': order.order_id})
             except BaseException:
                 invalid.append(elem['order_id'])
 
         if len(invalid) != 0:
             data = {'message': 'Bad request', "validation_error": {"orders": invalid}}
             return make_response(jsonify(data), 400)
+
+        for elem in ORDERS:
+            db_sess.add(elem)
+        db_sess.commit()
         data = {'message': 'Created', "orders": valid}
         return make_response(jsonify(data), 201)
 
@@ -78,10 +79,14 @@ class OrderAssign(Resource):
     def post(self):
         db_sess = db_session.create_session()
         args = assign_parser.parse_args()
-        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
+        print(args['courier_id'])
+        courier = db_sess.query(Courier).filter(Courier.courier_id == 6).first()
+        print(3)
         if not courier:
             abort(400, message='Bad Request')
-        reg = list(map(lambda region: region.region_id, courier.regions))
+        print(2)
+        reg = list(map(lambda c_to_r: c_to_r.region_id, db_sess.query(CourierToRegion).filter(
+            CourierToRegion.courier_id == courier.courier_id).all()))
         print(reg)
         ans = []
         time = datetime.datetime.now(datetime.timezone.utc)
@@ -93,24 +98,27 @@ class OrderAssign(Resource):
                 courier_order = CourierToOrder()
                 courier_order.courier = courier
                 courier_order.order = order
-
-                courier_order.assigned_time = time
+                if not courier.completed_flag:
+                    courier_order.assigned_time = time
+                else:
+                    courier_order.assigned_time = courier.assign_time
 
                 order.flag = 'assigned'
                 courier.weight_of_food += order.weight
 
                 db_sess.add(courier_order)
-                db_sess.commit()
-                ans.append({"id": order.order_id})
+                # ans.append({"id": order.order_id})
         db_sess.commit()
 
+        orders = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == courier.courier_id).all()
+        ans = list(map(lambda c_to_o: c_to_o.order_id, orders))
         print(ans)
         if len(ans) == 0:
-            return jsonify([])
+            return jsonify({'orders': []})
 
         if not courier.completed_flag:
             assign_time = str(time)
-            courier.assign_time = assign_time
+            courier.assign_time = time
             db_sess.commit()
         else:
             assign_time = courier.assign_time

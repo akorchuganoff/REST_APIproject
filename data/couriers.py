@@ -1,3 +1,4 @@
+import datetime
 import sqlalchemy
 from .db_session import SqlAlchemyBase
 from sqlalchemy_serializer import SerializerMixin
@@ -16,7 +17,7 @@ class Courier(SqlAlchemyBase, SerializerMixin):
 
     max_weight = sqlalchemy.Column(sqlalchemy.Float, default=0)
     completed_flag = sqlalchemy.Column(sqlalchemy.Boolean, default=False, nullable=False)
-    assign_time = sqlalchemy.Column(sqlalchemy.String, default='', nullable=False)
+    assign_time = sqlalchemy.Column(sqlalchemy.DateTime, default=datetime.datetime.now(), nullable=False)
 
     regions = orm.relation("CourierToRegion", back_populates='courier')
     orders = orm.relation("CourierToOrder", back_populates='courier')

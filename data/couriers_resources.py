@@ -4,6 +4,7 @@ from . import db_session
 from .couriers import Courier
 from .regions import CourierToRegion, Regions
 from .orders import CourierToOrder, Orders
+from.order_resources import check_time
 
 parser = reqparse.RequestParser()
 parser.add_argument('data', required=False, type=dict, action='append')
@@ -53,33 +54,44 @@ class CourierResource(Resource):
                     db_sess.add(courier_to_region)
                     db_sess.commit()
 
-                orders = db_sess.query(Orders).filter(Orders.flag == 'assigned', Orders.region.notin_(args['regions']))
-                for order in orders:
-                    courier_to_order = db_sess.query(CourierToOrder).filter(
-                        CourierToOrder.courier_id == courier.courier_id,
-                        CourierToOrder.order_id == order.order_id).first()
-                    if not courier_to_order:
-                        continue
+            if args['working_hours']:
+                courier.working_hours = args['working_hours']
+                db_sess.commit()
+
+            orders = db_sess.query(Orders).filter(Orders.flag == 'assigned', Orders.region.notin_(args['regions']))
+            for order in orders:
+                courier_to_order = db_sess.query(CourierToOrder).filter(
+                    CourierToOrder.courier_id == courier.courier_id,
+                    CourierToOrder.order_id == order.order_id).first()
+                if not courier_to_order:
+                    continue
+                order.flag = None
+                courier.weight_of_food -= order.weight
+                db_sess.delete(courier_to_order)
+                db_sess.commit()
+
+            courier_to_order = db_sess.query(CourierToOrder).filter(
+                CourierToOrder.courier_id == courier.courier_id).all()
+
+            for c_to_o in courier_to_order:
+                order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id).first()
+                if not check_time(courier, order):
                     order.flag = None
                     courier.weight_of_food -= order.weight
                     db_sess.delete(courier_to_order)
                     db_sess.commit()
 
-                arr_courier_to_order = db_sess.query(CourierToOrder).filter(
-                    CourierToOrder.courier_id == courier.courier_id).all()
-                i = 0
-                while courier.max_weight < courier.weight_of_food:
-                    c_to_o = arr_courier_to_order[i]
-                    order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id).first()
-                    order.flag = None
-                    courier.weight_of_food -= order.weight
-                    db_sess.delete(c_to_o)
-                    db_sess.commit()
-                    i += 1
-
-            if args['working_hours']:
-                courier.working_hours = args['working_hours']
+            arr_courier_to_order = db_sess.query(CourierToOrder).filter(
+                CourierToOrder.courier_id == courier.courier_id).all()
+            i = 0
+            while courier.max_weight < courier.weight_of_food:
+                c_to_o = arr_courier_to_order[i]
+                order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id).first()
+                order.flag = None
+                courier.weight_of_food -= order.weight
+                db_sess.delete(c_to_o)
                 db_sess.commit()
+                i += 1
         except Exception:
             print(Exception.__class__.__name__)
 
@@ -93,6 +105,7 @@ class CourierResource(Resource):
 class CouriersListResource(Resource):
     # noinspection PyMethodMayBeStatic
     def post(self):
+        db_sess = db_session.create_session()
         args = {}
         # noinspection PyBroadException
         try:
@@ -102,49 +115,63 @@ class CouriersListResource(Resource):
 
         valid = []
         invalid = []
-
         for elem in args['data']:
-            db_sess = db_session.create_session()
-            # noinspection PyBroadException
             try:
-                courier = Courier()
-                courier.courier_id = elem['courier_id']
-                courier.courier_type = elem['courier_type']
+                if type(elem['courier_id']) == int and type(elem['courier_type']) == str and type(
+                        elem['working_hours']) == list and type(elem['regions']) == list:
+                    if elem['courier_id'] in list(map(lambda c: c.courier_id, db_sess.query(Courier).all())):
+                        raise Exception
 
-                courier.working_hours = ' '.join(map(str, elem['working_hours']))
+                    for t in elem['working_hours']:
+                        if type(t) != str:
+                            raise Exception
 
-                if courier.courier_type == 'foot':
-                    courier.max_weight = 10
-                elif courier.courier_type == 'bike':
-                    courier.max_weight = 20
+                    for r in elem['regions']:
+                        if type(r) != int:
+                            raise Exception
+
+                    continue
                 else:
-                    courier.max_weight = 50
-                db_sess.add(courier)
-                db_sess.commit()
-
-                courier = db_sess.query(Courier).filter(Courier.courier_id == elem['courier_id']).first()
-
-                for reg in elem['regions']:
-                    region = db_sess.query(Regions).filter(Regions.region == reg).first()
-                    if not region:
-                        region = Regions()
-                        region.region = reg
-                        db_sess.add(region)
-                        db_sess.commit()
-
-                    courier_to_region = CourierToRegion()
-                    courier_to_region.courier = courier
-                    courier_to_region.region = region
-                    db_sess.add(courier_to_region)
-                    db_sess.commit()
-                valid.append({'id': elem['courier_id']})
+                    raise Exception
             except Exception:
-                # return {'id': elem['courier_id']}
                 invalid.append({'id': elem['courier_id']})
 
         if len(invalid) != 0:
             data = {"message": "Bad Request", "validation_error": {"couriers": invalid}}
             return make_response(jsonify(data), 400)
 
+        for elem in args['data']:
+            # noinspection PyBroadException
+            # try:
+            courier = Courier()
+            courier.courier_id = elem['courier_id']
+            courier.courier_type = elem['courier_type']
+
+            courier.working_hours = ' '.join(map(str, elem['working_hours']))
+
+            if courier.courier_type == 'foot':
+                courier.max_weight = 10
+            elif courier.courier_type == 'bike':
+                courier.max_weight = 20
+            else:
+                courier.max_weight = 50
+            db_sess.add(courier)
+
+            for reg in elem['regions']:
+                region = db_sess.query(Regions).filter(Regions.region == reg).first()
+                if not region:
+                    region = Regions()
+                    region.region = reg
+                    db_sess.add(region)
+
+                courier_to_region = CourierToRegion()
+                courier_to_region.courier = courier
+                courier_to_region.region = region
+                db_sess.add(courier_to_region)
+            valid.append({'id': elem['courier_id']})
+            # except Exception:
+            #     invalid.append({'id': elem['courier_id']})
+
+        db_sess.commit()
         data = {"message": "Created", "couriers": valid}
         return make_response(jsonify(data), 201)
