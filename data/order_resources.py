@@ -1,9 +1,9 @@
-from flask import jsonify, request, make_response
+from flask import jsonify, make_response
 from flask_restful import reqparse, abort, Resource
 from . import db_session
 from .orders import Orders
 from .couriers import Courier
-from .regions import Regions, CourierToRegion
+from .regions import CourierToRegion
 from .orders import CourierToOrder
 import datetime
 import arrow
@@ -19,7 +19,8 @@ complete_parser.add_argument("courier_id", required=True, type=int)
 complete_parser.add_argument("order_id", required=True, type=int)
 complete_parser.add_argument("complete_time", required=True, type=str)
 
-def checkTime(courier, order):
+
+def check_time(courier, order):
     times1 = courier.working_hours.split(' ')
     times2 = order.delivery_hours.split(' ')
 
@@ -37,18 +38,22 @@ def checkTime(courier, order):
                 return True
     return False
 
+
 class OrderListResource(Resource):
+    # noinspection PyMethodMayBeStatic
     def post(self):
-        db_sess = db_session.create_session()
         args = parser.parse_args()
         valid = []
         invalid = []
         for elem in args['data']:
+            # noinspection PyBroadException
             try:
                 db_sess = db_session.create_session()
                 order = Orders()
                 order.order_id = elem['order_id']
                 order.weight = elem['weight']
+                if order.weight > 50:
+                    raise BaseException
                 order.region = elem['region']
                 order.delivery_hours = elem['delivery_hours']
 
@@ -57,7 +62,8 @@ class OrderListResource(Resource):
 
                 order_get = db_sess.query(Orders).filter(Orders.order_id == elem['order_id']).first()
                 valid.append({'id': order_get.order_id})
-            except:
+
+            except BaseException:
                 invalid.append(elem['order_id'])
 
         if len(invalid) != 0:
@@ -68,12 +74,11 @@ class OrderListResource(Resource):
 
 
 class OrderAssign(Resource):
+    # noinspection PyMethodMayBeStatic
     def post(self):
         db_sess = db_session.create_session()
         args = assign_parser.parse_args()
-        id = args['courier_id']
-        L = []
-        courier = db_sess.query(Courier).filter(Courier.courier_id == id).first()
+        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
         if not courier:
             abort(400, message='Bad Request')
         reg = list(map(lambda region: region.region_id, courier.regions))
@@ -81,7 +86,8 @@ class OrderAssign(Resource):
         ans = []
         time = datetime.datetime.now(datetime.timezone.utc)
         for order in db_sess.query(Orders).all():
-            if order.region in reg and order.weight < courier.max_weight - courier.weight_of_food and order.flag == None and checkTime(courier, order):
+            if order.region in reg and order.weight < courier.max_weight - courier.weight_of_food and\
+                    order.flag is None and check_time(courier, order):
                 print(order.order_id)
 
                 courier_order = CourierToOrder()
@@ -114,9 +120,9 @@ class OrderAssign(Resource):
 
 
 class OrderComplete(Resource):
+    # noinspection PyMethodMayBeStatic
     def post(self):
         db_sess = db_session.create_session()
-
 
         # try:
         args = complete_parser.parse_args()
@@ -136,12 +142,10 @@ class OrderComplete(Resource):
             abort(400, message='Bad Request')
 
         time = arrow.get(complete_time).datetime
-        print(time)
         courier_to_order.completed_time = time
         db_sess.commit()
         #
         delta = courier_to_order.completed_time - courier_to_order.assigned_time
-        print(delta.total_seconds())
 
         courier_to_region = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id,
                                                                   CourierToRegion.region_id == order.region).first()
@@ -152,22 +156,28 @@ class OrderComplete(Resource):
         db_sess.commit()
 
         lines = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).all()
-        times = map(lambda reg: reg.time, lines)
+        # times = map(lambda reg: reg.time / reg.count, lines)
+        times = []
+        for i in range(len(lines)):
+            if lines[i].count == 0:
+                continue
+            times.append(lines[i].time / lines[i].count)
         t = min(times)
+        print(t)
         rating = (60 * 60 - min(t, 60 * 60)) / (60 * 60) * 5
-
+        print(rating)
         courier.rating = rating
         db_sess.commit()
 
         if courier.courier_type == 'foot':
-            C = 2
+            k = 2
         elif courier.courier_type == 'bike':
-            C = 5
+            k = 5
         else:
-            C = 9
+            k = 9
 
         earnings = courier.earnings
-        courier.earnings = earnings + 500 * C
+        courier.earnings = earnings + 500 * k
         courier.completed_flag = True
         db_sess.commit()
 

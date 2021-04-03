@@ -5,17 +5,6 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import orm
 
 
-# association_table_courier_to_order = sqlalchemy.Table(
-#     'courier_to_order',
-#     SqlAlchemyBase.metadata,
-#     sqlalchemy.Column('order_id', sqlalchemy.Integer,
-#                       sqlalchemy.ForeignKey('Orders.order_id')),
-#     sqlalchemy.Column('courier_id', sqlalchemy.Integer,
-#                       sqlalchemy.ForeignKey('couriers.courier_id')),
-#     sqlalchemy.Column('assigned_time', sqlalchemy.String, nullable=False, default=''),
-#     sqlalchemy.Column('completed_time', sqlalchemy.Float, nullable=False, default=0)
-# )
-
 class CourierToOrder(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'courier_to_order'
 
@@ -27,7 +16,6 @@ class CourierToOrder(SqlAlchemyBase, SerializerMixin):
 
     courier = orm.relation("Courier")
     order = orm.relation("Orders")
-
 
     def __repr__(self):
         return [{'Order_id': self.order_id}, {'Weight': self.weight}, {'Region': self.region},
@@ -44,7 +32,6 @@ class Orders(SqlAlchemyBase, SerializerMixin):
     flag = sqlalchemy.Column(sqlalchemy.String, nullable=True, default=None)
 
     orders = orm.relation("CourierToOrder", back_populates='order')
-
 
     def __repr__(self):
         return [{'Order_id': self.order_id}, {'Weight': self.weight}, {'Region': self.region},
