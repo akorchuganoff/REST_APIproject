@@ -132,15 +132,13 @@ class OrderComplete(Resource):
     # noinspection PyMethodMayBeStatic
     def post(self):
         db_sess = db_session.create_session()
-
+        # noinspection PyBroadException
         try:
             args = complete_parser.parse_args()
             courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
 
             order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
             complete_time = args["complete_time"]
-
-            # db_sess.commit()
 
             if not courier or not order or not complete_time:
                 abort(400, message='Bad Request')
@@ -161,8 +159,9 @@ class OrderComplete(Resource):
                 #
                 delta = courier_to_order.completed_time - courier_to_order.assigned_time
 
-                courier_to_region = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id,
-                                                                          CourierToRegion.region_id == order.region).first()
+                courier_to_region = db_sess.query(CourierToRegion).filter(
+                    CourierToRegion.courier_id == courier.courier_id,
+                    CourierToRegion.region_id == order.region).first()
                 t = courier_to_region.time
                 courier_to_region.time = t + delta.total_seconds()
                 c = courier_to_region.count
@@ -170,7 +169,6 @@ class OrderComplete(Resource):
                 db_sess.commit()
 
                 lines = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).all()
-                # times = map(lambda reg: reg.time / reg.count, lines)
                 times = []
                 for i in range(len(lines)):
                     if lines[i].count == 0:
