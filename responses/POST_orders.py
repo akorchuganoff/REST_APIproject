@@ -1,5 +1,5 @@
 from requests import get,post,delete, patch
-print(post('http://0.0.0.0:8080/orders', json={
+print(post('http://130.193.55.13:8080/orders', json={
   "data": [
     {
       "order_id": 1,
@@ -68,3 +68,5 @@ print(post('http://0.0.0.0:8080/orders', json={
     }
   ]
 }).json())
+
+{'message': 'Created', 'orders': [{'id': 1}, {'id': 2}, {'id': 3}, {'id': 4}, {'id': 5}, {'id': 6}, {'id': 7}, {'id': 8}, {'id': 9}, {'id': 10}, {'id': 11}, {'id': 12}]}

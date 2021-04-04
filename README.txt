@@ -1,12 +1,21 @@
-Наличие файла  README  в корне репозитория с инструкциями по установке, развертыванию и запуску сервиса и
-тестов
-
 Инструкция по установке:
 1) Установить библиотеки и зависимости из файла requirements.txt
 2) Запустить файл server.py
 3) Запросы для теста находятся в папке responses
 4) Название каждого файла соответствует запросу, который он выполняет. С содержимым запросы вы можете ознакомиться
 внутри файла
+
+Инструкция по развертыванию сервера:
+Войти на ВМ и выполнить следующие команды:
+sudo apt-get update
+sudo apt-get install python3 python3-pip python3-dev gcc git nginx
+git clone https://<git_user_name>:<git_pass> @github.com/<git_user_name>/<repo_name>.git
+pip3 install -r requirements.txt
+
+Инструкция по запуску сервера:
+    Выполнить следующие команды:
+    # cd REST_APIproject
+    # python3 server.py
 
 
 Модели:
