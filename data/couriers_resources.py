@@ -85,7 +85,7 @@ class CourierResource(Resource):
 
             if args['working_hours']:
                 courier_to_order = db_sess.query(CourierToOrder).filter(
-                    CourierToOrder.courier_id == courier.courier_id).all()
+                    CourierToOrder.courier_id == courier.courier_id, CourierToOrder.completed_time == None).all()
 
                 invalid = []
                 for i in range(len(courier_to_order)):
@@ -102,19 +102,24 @@ class CourierResource(Resource):
             if args['courier_type']:
                 arr_courier_to_order = db_sess.query(CourierToOrder).filter(
                     CourierToOrder.courier_id == courier.courier_id, CourierToOrder.completed_time == None).all()
-                i = 0
                 courier = db_sess.query(Courier).filter(Courier.courier_id == id).first()
-                while courier.max_weight < courier.weight_of_food:
-                    c_to_o = arr_courier_to_order[i]
-                    order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id, ).first()
-                    order.flag = None
-                    courier.weight_of_food -= order.weight
-                    db_sess.delete(c_to_o)
-                    db_sess.commit()
-                    i += 1
+                for c_to_o in arr_courier_to_order:
+                    order = db_sess.query(Orders).filter(Orders.order_id == c_to_o.order_id).first()
+                    if order.weight > courier.max_weight:
+                        order.flag = None
+                        courier.weight_of_food -= order.weight
+                        db_sess.delete(c_to_o)
+                        db_sess.commit()
+                # i = 0
+                # while courier.max_weight < courier.weight_of_food:
+                #     c_to_o = arr_courier_to_order[i]
+                #     order.flag = None
+                #     courier.weight_of_food -= order.weight
+                #     db_sess.delete(c_to_o)
+                #     db_sess.commit()
+                #     i += 1
         except Exception:
-            print(1)
-            print(Exception.__class__.__name__)
+            abort(400, message='Bad Request')
 
         courier_to_region = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == id).all()
         reg = list(map(lambda regions: regions.region_id, courier_to_region))

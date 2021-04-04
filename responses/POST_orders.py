@@ -1,24 +1,24 @@
 from requests import get,post,delete, patch
-print(post('http://0.0.0.0:8080/orders', json={
+print(post('http://127.0.0.1:8080/orders', json={
   "data": [
     {
       "order_id": 1,
-      "weight": 5,
+      "weight": 35,
       "region": 3,
       "delivery_hours": ['13:00-15:00']
     }, {
       "order_id": 2,
-      "weight": 5,
+      "weight": 35,
       "region": 3,
       "delivery_hours": ['09:00-10:00']
     }, {
       "order_id": 3,
-      "weight": 5,
+      "weight": 35,
       "region": 3,
       "delivery_hours": ['14:00-14:30']
     }, {
       "order_id": 4,
-      "weight": 5,
+      "weight": 35,
       "region": 3,
       "delivery_hours": ['13:30-14:30']
     },

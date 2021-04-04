@@ -20,7 +20,7 @@ api.add_resource(order_resources.OrderComplete, '/orders/complete')
 
 def main():
     db_session.global_init("db/database.db")
-    serve(app, port=8080, host='0.0.0.0')
+    serve(app, port=8080, host='127.0.0.1')
 
 
 if __name__ == '__main__':
