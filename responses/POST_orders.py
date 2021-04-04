@@ -1,5 +1,5 @@
 from requests import get,post,delete, patch
-print(post('http://127.0.0.1:8080/orders', json={
+print(post('http://0.0.0.0:8080/orders', json={
   "data": [
     {
       "order_id": 1,

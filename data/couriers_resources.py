@@ -64,9 +64,7 @@ class CourierResource(Resource):
                     db_sess.commit()
 
             if args['working_hours']:
-                print(args['working_hours'])
                 courier.working_hours = ' '.join(args['working_hours'])
-                print(courier.working_hours)
                 db_sess.commit()
 
             if args['regions']:

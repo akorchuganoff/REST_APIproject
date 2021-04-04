@@ -80,14 +80,11 @@ class OrderAssign(Resource):
     def post(self):
         db_sess = db_session.create_session()
         args = assign_parser.parse_args()
-        print(args['courier_id'])
         courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
         if not courier:
             abort(400, message='Bad Request')
-        print(2)
         reg = list(map(lambda c_to_r: c_to_r.region_id, db_sess.query(CourierToRegion).filter(
             CourierToRegion.courier_id == courier.courier_id).all()))
-        print(reg)
         ORDERS = []
         time = datetime.datetime.now(datetime.timezone.utc)
         for order in db_sess.query(Orders).all():
@@ -114,13 +111,19 @@ class OrderAssign(Resource):
         orders = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == courier.courier_id).all()
         order_list = list(map(lambda c_to_o: c_to_o.order_id, orders))
         ans = list(map(lambda x: {"id": x}, order_list))
-        print(ans)
-        if len(ORDERS) == 0:
-            return jsonify({'orders': ans})
 
-        assign_time = str(time)
-        courier.assign_time = time
+        assign_time = max(map(lambda c_to_o: c_to_o.assigned_time,
+                              db_sess.query(CourierToOrder).filter(
+                                  CourierToOrder.courier_id == courier.courier_id).all()))
+
+        courier.assign_time = assign_time
         db_sess.commit()
+
+        if len(ORDERS) == 0:
+            if ans:
+                return jsonify({'orders': ans, 'assign_time': assign_time})
+            else:
+                return jsonify({'orders': ans})
 
         data = {"order": ans,  'assign_time': assign_time}
         return make_response(jsonify(data), 200)
@@ -131,75 +134,74 @@ class OrderComplete(Resource):
     def post(self):
         db_sess = db_session.create_session()
         # noinspection PyBroadException
-        # try:
-        args = complete_parser.parse_args()
-        courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
+        try:
+            args = complete_parser.parse_args()
+            courier = db_sess.query(Courier).filter(Courier.courier_id == args['courier_id']).first()
 
-        order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
-        complete_time = args["complete_time"]
+            order = db_sess.query(Orders).filter(Orders.order_id == args['order_id']).first()
+            complete_time = args["complete_time"]
 
-        if not courier or not order or not complete_time:
+            if not courier or not order or not complete_time:
+                abort(400, message='Bad Request')
+
+            courier_to_order = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == args['courier_id'],
+                                                                    CourierToOrder.order_id == args['order_id']).first()
+            if not courier_to_order:
+                abort(400, message='Bad Request')
+
+            if order.flag != 'completed':
+                order.flag = 'completed'
+
+                time = arrow.get(complete_time).datetime
+                courier_to_order.completed_time = time
+                db_sess.commit()
+                #
+                if not courier.completed_flag:
+                    delta = courier_to_order.completed_time - courier_to_order.assigned_time
+
+                else:
+                    c_to_o = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == courier.courier_id,
+                                                                  CourierToOrder.completed_time != None).all()
+                    times = list(map(lambda elem: elem.completed_time, c_to_o))
+                    times.sort()
+
+                    # times[-1] = courier_to_order.completed_time
+                    delta = courier_to_order.completed_time - times[-2]
+
+                courier_to_region = db_sess.query(CourierToRegion).filter(
+                    CourierToRegion.courier_id == courier.courier_id,
+                    CourierToRegion.region_id == order.region).first()
+                t = courier_to_region.time
+                courier_to_region.time = t + delta.total_seconds()
+                c = courier_to_region.count
+                courier_to_region.count = c + 1
+                db_sess.commit()
+
+                lines = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).all()
+                times = []
+                for i in range(len(lines)):
+                    if lines[i].count == 0:
+                        continue
+                    times.append(lines[i].time / lines[i].count)
+                t = min(times)
+                rating = (60 * 60 - min(t, 60 * 60)) / (60 * 60) * 5
+                courier.rating = rating
+                db_sess.commit()
+
+                if courier.courier_type == 'foot':
+                    k = 2
+                elif courier.courier_type == 'bike':
+                    k = 5
+                else:
+                    k = 9
+
+                courier.weight_of_food -= order.weight
+                earnings = courier.earnings
+                courier.earnings = earnings + 500 * k
+                courier.completed_flag = True
+                db_sess.commit()
+
+            return make_response(jsonify({"order_id": order.order_id}), 200)
+
+        except Exception:
             abort(400, message='Bad Request')
-
-        courier_to_order = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == args['courier_id'],
-                                                                CourierToOrder.order_id == args['order_id']).first()
-        if not courier_to_order:
-            abort(400, message='Bad Request')
-
-        if order.flag != 'completed':
-            order.flag = 'completed'
-
-            time = arrow.get(complete_time).datetime
-            courier_to_order.completed_time = time
-            db_sess.commit()
-            #
-            if not courier.completed_flag:
-                delta = courier_to_order.completed_time - courier_to_order.assigned_time
-
-            else:
-                c_to_o = db_sess.query(CourierToOrder).filter(CourierToOrder.courier_id == courier.courier_id,
-                                                              CourierToOrder.completed_time != None).all()
-                times = list(map(lambda elem: elem.completed_time, c_to_o))
-                times.sort()
-
-                # times[-1] = courier_to_order.completed_time
-                delta = courier_to_order.completed_time - times[-2]
-
-            courier_to_region = db_sess.query(CourierToRegion).filter(
-                CourierToRegion.courier_id == courier.courier_id,
-                CourierToRegion.region_id == order.region).first()
-            t = courier_to_region.time
-            courier_to_region.time = t + delta.total_seconds()
-            c = courier_to_region.count
-            courier_to_region.count = c + 1
-            db_sess.commit()
-
-            lines = db_sess.query(CourierToRegion).filter(CourierToRegion.courier_id == courier.courier_id).all()
-            times = []
-            for i in range(len(lines)):
-                if lines[i].count == 0:
-                    continue
-                times.append(lines[i].time / lines[i].count)
-            t = min(times)
-            rating = (60 * 60 - min(t, 60 * 60)) / (60 * 60) * 5
-            print(rating)
-            courier.rating = rating
-            db_sess.commit()
-
-            if courier.courier_type == 'foot':
-                k = 2
-            elif courier.courier_type == 'bike':
-                k = 5
-            else:
-                k = 9
-
-            courier.weight_of_food -= order.weight
-            earnings = courier.earnings
-            courier.earnings = earnings + 500 * k
-            courier.completed_flag = True
-            db_sess.commit()
-
-        return make_response(jsonify({"order_id": order.order_id}), 200)
-
-        # except Exception:
-        #     abort(400, message='Bad Request')
